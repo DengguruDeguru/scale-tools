@@ -1,0 +1,283 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+.wrap{padding:1rem 0;font-family:var(--font-sans)}
+.section-label{font-size:11px;font-weight:500;color:var(--color-text-secondary);margin-bottom:6px;letter-spacing:0.04em;text-transform:uppercase}
+.root-row{display:flex;gap:6px;flex-wrap:wrap}
+.root-btn{
+  width:42px;height:42px;border-radius:50%;
+  border:2px solid var(--color-border-secondary);
+  background:var(--color-background-secondary);
+  color:var(--color-text-secondary);
+  font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;
+}
+.root-btn:hover{border-color:var(--color-border-primary);color:var(--color-text-primary)}
+.root-btn.active{
+  background:#c0392b;color:#fff;
+  border-color:#c0392b;
+  box-shadow:0 0 0 3px rgba(192,57,43,0.22);
+  font-weight:700;
+}
+.cat-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.cat-tab{
+  padding:6px 13px;border-radius:var(--border-radius-md);
+  border:2px solid transparent;
+  background:var(--color-background-secondary);
+  color:var(--color-text-secondary);
+  font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;
+}
+.cat-tab:hover{color:var(--color-text-primary);background:var(--color-background-tertiary)}
+.cat-tab.active{
+  background:var(--color-background-primary);
+  color:var(--color-text-primary);
+  border-color:var(--color-text-primary);
+  font-weight:700;
+}
+.scale-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;margin-bottom:1rem}
+.scale-btn{
+  padding:8px 10px;border-radius:var(--border-radius-md);
+  border:2px solid transparent;
+  background:var(--color-background-secondary);
+  color:var(--color-text-secondary);
+  font-size:12px;cursor:pointer;text-align:left;line-height:1.35;transition:all .15s;
+}
+.scale-btn:hover{background:var(--color-background-tertiary);color:var(--color-text-primary)}
+.scale-btn.active{
+  background:var(--color-background-primary);
+  color:var(--color-text-primary);
+  border-color:var(--color-text-primary);
+  font-weight:700;
+}
+.scale-btn.active .scale-name-big{color:var(--color-text-primary)}
+.scale-name-big{font-size:13px;font-weight:500;margin-bottom:2px;color:var(--color-text-primary)}
+.scale-intervals{font-size:10px;color:var(--color-text-secondary)}
+.legend{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.leg-item{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--color-text-secondary)}
+.leg-dot{width:14px;height:14px;border-radius:50%;flex-shrink:0;border:1px solid var(--color-border-secondary)}
+</style>
+
+<div class="wrap">
+  <h2 class="sr-only">스케일 프렛보드 — 루트와 스케일을 선택하세요</h2>
+
+  <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:14px">
+    <div>
+      <div class="section-label">루트 노트</div>
+      <div class="root-row" id="root-row"></div>
+    </div>
+    <div>
+      <div class="section-label">카테고리</div>
+      <div class="cat-tabs" id="cat-tabs"></div>
+    </div>
+    <div>
+      <div class="section-label">스케일</div>
+      <div class="scale-grid" id="scale-grid"></div>
+    </div>
+  </div>
+
+  <div id="scale-title" style="font-size:15px;font-weight:500;color:var(--color-text-primary);margin-bottom:8px"></div>
+  <div class="legend" id="legend"></div>
+  <div id="fb-svg"></div>
+</div>
+
+<script>
+const NOTES=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const OPEN=[4,11,7,2,9,4];
+const FRETS=15;
+const DEGREE_NAMES=['1','b2','2','b3','3','4','b5','5','#5','6','b7','7'];
+
+function degreeColor(s){
+  if(s===0) return{fill:'#c0392b',text:'#fff'};
+  if(s===3||s===4) return{fill:'#2471a3',text:'#fff'};
+  if(s===6||s===7||s===8) return{fill:'#1e8449',text:'#fff'};
+  if(s===10||s===11) return{fill:'#b7770d',text:'#fff'};
+  return{fill:'var(--color-background-primary)',text:'var(--color-text-primary)',stroke:'var(--color-border-primary)'};
+}
+
+const CATEGORIES={
+  '메이저/마이너':[
+    {name:'Major (Ionian)',short:'Major',intervals:[0,2,4,5,7,9,11]},
+    {name:'Natural Minor',short:'Nat. Minor',intervals:[0,2,3,5,7,8,10]},
+    {name:'Harmonic Minor',short:'Harm. Minor',intervals:[0,2,3,5,7,8,11]},
+    {name:'Melodic Minor',short:'Mel. Minor',intervals:[0,2,3,5,7,9,11]},
+  ],
+  '펜타토닉':[
+    {name:'Major Pentatonic',short:'Maj Penta',intervals:[0,2,4,7,9]},
+    {name:'Minor Pentatonic',short:'Min Penta',intervals:[0,3,5,7,10]},
+    {name:'Blues Scale',short:'Blues',intervals:[0,3,5,6,7,10]},
+    {name:'Major Blues',short:'Maj Blues',intervals:[0,2,3,4,7,9]},
+  ],
+  '헥사토닉':[
+    {name:'Whole Tone',short:'Whole Tone',intervals:[0,2,4,6,8,10]},
+    {name:'Augmented',short:'Augmented',intervals:[0,3,4,7,8,11]},
+    {name:'Prometheus',short:'Prometheus',intervals:[0,2,4,6,9,10]},
+    {name:'Blues Hexatonic',short:'Blues Hex',intervals:[0,2,3,5,6,7]},
+  ],
+  '모드 (교회)':[
+    {name:'Ionian (Major)',short:'Ionian',intervals:[0,2,4,5,7,9,11]},
+    {name:'Dorian',short:'Dorian',intervals:[0,2,3,5,7,9,10]},
+    {name:'Phrygian',short:'Phrygian',intervals:[0,1,3,5,7,8,10]},
+    {name:'Lydian',short:'Lydian',intervals:[0,2,4,6,7,9,11]},
+    {name:'Mixolydian',short:'Mixolydian',intervals:[0,2,4,5,7,9,10]},
+    {name:'Aeolian',short:'Aeolian',intervals:[0,2,3,5,7,8,10]},
+    {name:'Locrian',short:'Locrian',intervals:[0,1,3,5,6,8,10]},
+  ],
+  '멜로딕 마이너 모드':[
+    {name:'Melodic Minor',short:'Mel. Minor',intervals:[0,2,3,5,7,9,11]},
+    {name:'Dorian b2',short:'Dorian b2',intervals:[0,1,3,5,7,9,10]},
+    {name:'Lydian Augmented',short:'Lyd. Aug',intervals:[0,2,4,6,8,9,11]},
+    {name:'Lydian Dominant',short:'Lyd. Dom',intervals:[0,2,4,6,7,9,10]},
+    {name:'Mixolydian b6',short:'Mix. b6',intervals:[0,2,4,5,7,8,10]},
+    {name:'Locrian #2',short:'Loc. #2',intervals:[0,2,3,5,6,8,10]},
+    {name:'Altered',short:'Altered',intervals:[0,1,3,4,6,8,10]},
+  ],
+  '하모닉 마이너 모드':[
+    {name:'Harmonic Minor',short:'Harm. Minor',intervals:[0,2,3,5,7,8,11]},
+    {name:'Locrian #6',short:'Loc. #6',intervals:[0,1,3,5,6,9,10]},
+    {name:'Ionian #5',short:'Ion. #5',intervals:[0,2,4,5,8,9,11]},
+    {name:'Dorian #4',short:'Dor. #4',intervals:[0,2,3,6,7,9,10]},
+    {name:'Phrygian Dominant',short:'Phry. Dom',intervals:[0,1,4,5,7,8,10]},
+    {name:'Lydian #2',short:'Lyd. #2',intervals:[0,3,4,6,7,9,11]},
+    {name:'Super Locrian bb7',short:'Sup. Loc.',intervals:[0,1,3,4,6,8,9]},
+  ],
+  '코드 아르페지오':[
+    {name:'Major Triad',short:'Maj Triad',intervals:[0,4,7]},
+    {name:'Minor Triad',short:'Min Triad',intervals:[0,3,7]},
+    {name:'Diminished Triad',short:'Dim Triad',intervals:[0,3,6]},
+    {name:'Augmented Triad',short:'Aug Triad',intervals:[0,4,8]},
+    {name:'Major 7',short:'Maj7',intervals:[0,4,7,11]},
+    {name:'Dominant 7',short:'Dom7',intervals:[0,4,7,10]},
+    {name:'Minor 7',short:'Min7',intervals:[0,3,7,10]},
+    {name:'Minor Maj7',short:'mMaj7',intervals:[0,3,7,11]},
+    {name:'Half Dim (m7b5)',short:'m7b5',intervals:[0,3,6,10]},
+    {name:'Diminished 7',short:'Dim7',intervals:[0,3,6,9]},
+  ],
+  '기타':[
+    {name:'Chromatic',short:'Chromatic',intervals:[0,1,2,3,4,5,6,7,8,9,10,11]},
+    {name:'Diminished WH',short:'Dim WH',intervals:[0,2,3,5,6,8,9,11]},
+    {name:'Diminished HW',short:'Dim HW',intervals:[0,1,3,4,6,7,9,10]},
+    {name:'In Scale',short:'In Scale',intervals:[0,1,5,7,8]},
+    {name:'Hirajoshi',short:'Hirajoshi',intervals:[0,2,3,7,8]},
+    {name:'Double Harmonic',short:'Dbl Harm',intervals:[0,1,4,5,7,8,11]},
+  ],
+};
+
+let currentRoot='A', currentCat='펜타토닉', currentScale=CATEGORIES['펜타토닉'][1];
+
+function noteName(s,f){return NOTES[(OPEN[s]+f)%12];}
+function noteOffset(n,r){return(NOTES.indexOf(n)-NOTES.indexOf(r)+12)%12;}
+
+function buildFretboard(root,scale){
+  const intvSet=new Set(scale.intervals);
+  const STR=['E','B','G','D','A','E'];
+  const CW=52,CH=36,LP=26,TP=10;
+  const W=LP+FRETS*CW+10,H=TP+6*CH+26;
+  let s=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:840px;display:block;">`;
+  const mks=[3,5,7,9,12,15];
+  for(let f=0;f<FRETS;f++){
+    const x=LP+f*CW+CW/2,y=TP+6*CH+17;
+    s+=`<text x="${x}" y="${y}" text-anchor="middle" font-size="10" fill="var(--color-text-secondary)" font-family="var(--font-sans)">${f+1}</text>`;
+    if(mks.includes(f+1)&&f+1!==12) s+=`<circle cx="${x}" cy="${TP+3*CH}" r="3.5" fill="var(--color-border-secondary)" opacity="0.35"/>`;
+    if(f+1===12){
+      s+=`<circle cx="${x}" cy="${TP+CH*1.5}" r="3.5" fill="var(--color-border-secondary)" opacity="0.35"/>`;
+      s+=`<circle cx="${x}" cy="${TP+CH*4.5}" r="3.5" fill="var(--color-border-secondary)" opacity="0.35"/>`;
+    }
+  }
+  s+=`<line x1="${LP}" y1="${TP}" x2="${LP}" y2="${TP+6*CH}" stroke="var(--color-text-secondary)" stroke-width="2.5"/>`;
+  for(let f=0;f<=FRETS;f++){const x=LP+f*CW;s+=`<line x1="${x}" y1="${TP}" x2="${x}" y2="${TP+6*CH}" stroke="var(--color-border-tertiary)" stroke-width="0.5"/>`;}
+  for(let i=0;i<6;i++){
+    const y=TP+i*CH+CH/2;
+    s+=`<line x1="${LP}" y1="${y}" x2="${LP+FRETS*CW}" y2="${y}" stroke="var(--color-text-secondary)" stroke-width="${0.8+i*0.28}"/>`;
+    s+=`<text x="${LP-5}" y="${y+4}" text-anchor="middle" font-size="10" fill="var(--color-text-secondary)" font-family="var(--font-sans)">${STR[i]}</text>`;
+  }
+  for(let i=0;i<6;i++){
+    for(let f=1;f<=FRETS;f++){
+      const note=noteName(i,f);
+      const off=noteOffset(note,root);
+      if(!intvSet.has(off)) continue;
+      const cx=LP+(f-1)*CW+CW/2,cy=TP+i*CH+CH/2;
+      const col=degreeColor(off);
+      s+=`<circle cx="${cx}" cy="${cy}" r="13" fill="${col.fill}" stroke="${col.stroke||col.fill}" stroke-width="1.5"/>`;
+      s+=`<text x="${cx}" y="${cy+4}" text-anchor="middle" font-size="10" font-weight="500" fill="${col.text}" font-family="var(--font-sans)">${note}</text>`;
+    }
+  }
+  s+=`</svg>`;
+  return s;
+}
+
+function buildLegend(scale){
+  const intvs=scale.intervals;
+  const groups=[
+    {check:i=>i===0,label:'1도 (root)',fill:'#c0392b'},
+    {check:i=>i===3||i===4,label:'3도',fill:'#2471a3'},
+    {check:i=>i===6||i===7||i===8,label:'5도',fill:'#1e8449'},
+    {check:i=>i===10||i===11,label:'7도',fill:'#b7770d'},
+    {check:i=>![0,3,4,6,7,8,10,11].includes(i),label:'경과음',fill:'var(--color-background-primary)'},
+  ];
+  let html='';
+  groups.forEach(g=>{
+    if(intvs.some(i=>g.check(i)))
+      html+=`<div class="leg-item"><div class="leg-dot" style="background:${g.fill}"></div><span>${g.label}</span></div>`;
+  });
+  html+=`<span style="font-size:11px;color:var(--color-text-secondary);margin-left:4px">${intvs.map(i=>DEGREE_NAMES[i]).join(' - ')}</span>`;
+  document.getElementById('legend').innerHTML=html;
+}
+
+function render(){
+  document.getElementById('fb-svg').innerHTML=buildFretboard(currentRoot,currentScale);
+  document.getElementById('scale-title').textContent=`${currentRoot} ${currentScale.name}`;
+  buildLegend(currentScale);
+}
+
+// root buttons
+const roots=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const rr=document.getElementById('root-row');
+roots.forEach(r=>{
+  const b=document.createElement('button');
+  b.className='root-btn'+(r===currentRoot?' active':'');
+  b.textContent=r;
+  b.onclick=()=>{
+    currentRoot=r;
+    document.querySelectorAll('.root-btn').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    render();
+  };
+  rr.appendChild(b);
+});
+
+// category tabs
+const ct=document.getElementById('cat-tabs');
+Object.keys(CATEGORIES).forEach(cat=>{
+  const b=document.createElement('button');
+  b.className='cat-tab'+(cat===currentCat?' active':'');
+  b.textContent=cat;
+  b.onclick=()=>{
+    currentCat=cat;
+    document.querySelectorAll('.cat-tab').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    currentScale=CATEGORIES[cat][0];
+    buildScaleGrid();
+    render();
+  };
+  ct.appendChild(b);
+});
+
+function buildScaleGrid(){
+  const sg=document.getElementById('scale-grid');
+  sg.innerHTML='';
+  CATEGORIES[currentCat].forEach(sc=>{
+    const b=document.createElement('button');
+    b.className='scale-btn'+(sc===currentScale?' active':'');
+    b.innerHTML=`<div class="scale-name-big">${sc.short}</div><div class="scale-intervals">${sc.intervals.map(i=>DEGREE_NAMES[i]).join(' ')}</div>`;
+    b.onclick=()=>{
+      currentScale=sc;
+      document.querySelectorAll('.scale-btn').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      render();
+    };
+    sg.appendChild(b);
+  });
+}
+
+buildScaleGrid();
+render();
+</script>
