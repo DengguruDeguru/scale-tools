@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Scale Fretboard</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#111;color:#e8e8e8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:20px}
+  h1{font-size:18px;font-weight:600;margin-bottom:16px;color:#fff}
+  .section-label{font-size:11px;font-weight:600;color:#888;margin-bottom:7px;letter-spacing:0.06em;text-transform:uppercase}
+  .block{margin-bottom:16px}
+
+  /* root buttons */
+  .root-row{display:flex;gap:7px;flex-wrap:wrap}
+  .root-btn{
+    width:42px;height:42px;border-radius:50%;
+    border:2px solid #444;background:#1e1e1e;
+    color:#aaa;font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;
+  }
+  .root-btn:hover{border-color:#888;color:#fff}
+  .root-btn.active{background:#c0392b;color:#fff;border-color:#c0392b;box-shadow:0 0 0 3px rgba(192,57,43,0.3);font-weight:700}
+
+  /* category tabs */
+  .cat-tabs{display:flex;gap:6px;flex-wrap:wrap}
+  .cat-tab{
+    padding:6px 13px;border-radius:8px;
+    border:2px solid transparent;background:#1e1e1e;
+    color:#888;font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;
+  }
+  .cat-tab:hover{background:#2a2a2a;color:#ddd}
+  .cat-tab.active{background:#222;color:#fff;border-color:#fff;font-weight:700}
+
+  /* scale grid */
+  .scale-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:6px}
+  .scale-btn{
+    padding:8px 10px;border-radius:8px;
+    border:2px solid transparent;background:#1e1e1e;
+    color:#888;font-size:12px;cursor:pointer;text-align:left;line-height:1.35;transition:all .15s;
+  }
+  .scale-btn:hover{background:#2a2a2a;color:#ddd}
+  .scale-btn.active{background:#222;color:#fff;border-color:#fff;font-weight:700}
+  .scale-name-big{font-size:13px;font-weight:500;margin-bottom:2px;color:inherit}
+  .scale-intervals{font-size:10px;color:#666}
+  .scale-btn.active .scale-intervals{color:#aaa}
+
+  /* degree toggles */
+  .degree-toggles{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .deg-btn{
+    display:flex;align-items:center;gap:6px;
+    padding:6px 12px;border-radius:20px;border:2px solid transparent;
+    font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;opacity:0.38;
+  }
+  .deg-btn.on{opacity:1}
+  .deg-btn .dot{width:12px;height:12px;border-radius:50%}
+  .deg-btn-1{background:#1a0a09;border-color:#c0392b;color:#e74c3c}
+  .deg-btn-1.on{background:#2d1010;box-shadow:0 0 0 2px rgba(192,57,43,0.3)}
+  .deg-btn-3{background:#0a0e1a;border-color:#2471a3;color:#3498db}
+  .deg-btn-3.on{background:#0e1829;box-shadow:0 0 0 2px rgba(36,113,163,0.3)}
+  .deg-btn-5{background:#0a150d;border-color:#1e8449;color:#27ae60}
+  .deg-btn-5.on{background:#0d1f10;box-shadow:0 0 0 2px rgba(30,132,73,0.3)}
+  .deg-btn-7{background:#1a1200;border-color:#b7770d;color:#f39c12}
+  .deg-btn-7.on{background:#211700;box-shadow:0 0 0 2px rgba(183,119,13,0.3)}
+  .deg-btn-p{background:#151515;border-color:#555;color:#aaa}
+  .deg-btn-p.on{background:#1e1e1e;box-shadow:0 0 0 2px rgba(120,120,120,0.2)}
+
+  /* info */
+  #scale-title{font-size:15px;font-weight:600;color:#fff;margin-bottom:6px}
+  #interval-str{font-size:11px;color:#666;margin-bottom:10px}
+
+  /* fretboard */
+  #fb-wrap{overflow-x:auto}
+  svg text{user-select:none}
+</style>
+</head>
+<body>
+<h1>🎸 Scale Fretboard</h1>
+
+<div class="block">
+  <div class="section-label">루트 노트</div>
+  <div class="root-row" id="root-row"></div>
+</div>
+
+<div class="block">
+  <div class="section-label">카테고리</div>
+  <div class="cat-tabs" id="cat-tabs"></div>
+</div>
+
+<div class="block">
+  <div class="section-label">스케일</div>
+  <div class="scale-grid" id="scale-grid"></div>
+</div>
+
+<div class="block">
+  <div class="section-label">음 표시 켜기/끄기</div>
+  <div class="degree-toggles">
+    <button class="deg-btn deg-btn-1 on" data-deg="1" onclick="toggleDeg(this)">
+      <span class="dot" style="background:#c0392b"></span>1도 (Root)
+    </button>
+    <button class="deg-btn deg-btn-3 on" data-deg="3" onclick="toggleDeg(this)">
+      <span class="dot" style="background:#2471a3"></span>3도
+    </button>
+    <button class="deg-btn deg-btn-5 on" data-deg="5" onclick="toggleDeg(this)">
+      <span class="dot" style="background:#1e8449"></span>5도
+    </button>
+    <button class="deg-btn deg-btn-7 on" data-deg="7" onclick="toggleDeg(this)">
+      <span class="dot" style="background:#b7770d"></span>7도
+    </button>
+    <button class="deg-btn deg-btn-p on" data-deg="p" onclick="toggleDeg(this)">
+      <span class="dot" style="background:#555"></span>경과음
+    </button>
+  </div>
+</div>
+
+<div id="scale-title"></div>
+<div id="interval-str"></div>
+<div id="fb-wrap"></div>
+
+<script>
+const NOTES=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const OPEN=[4,11,7,2,9,4];
+const FRETS=15;
+const DEG_NAMES=['1','b2','2','b3','3','4','b5','5','#5','6','b7','7'];
+
+// which degree group each semitone belongs to
+function degGroup(s){
+  if(s===0) return '1';
+  if(s===3||s===4) return '3';
+  if(s===6||s===7||s===8) return '5';
+  if(s===10||s===11) return '7';
+  return 'p';
+}
+function degColor(s){
+  const g=degGroup(s);
+  if(g==='1') return{fill:'#c0392b',text:'#fff'};
+  if(g==='3') return{fill:'#2471a3',text:'#fff'};
+  if(g==='5') return{fill:'#1e8449',text:'#fff'};
+  if(g==='7') return{fill:'#b7770d',text:'#fff'};
+  return{fill:'#1e1e1e',text:'#ccc',stroke:'#555'};
+}
+
+// active degree visibility
+const activeDeg={1:true,3:true,5:true,7:true,p:true};
+function toggleDeg(btn){
+  const d=btn.dataset.deg;
+  activeDeg[d]=!activeDeg[d];
+  btn.classList.toggle('on',activeDeg[d]);
+  render();
+}
+
+const CATEGORIES={
+  '메이저/마이너':[
+    {name:'Major (Ionian)',short:'Major',intervals:[0,2,4,5,7,9,11]},
+    {name:'Natural Minor',short:'Nat. Minor',intervals:[0,2,3,5,7,8,10]},
+    {name:'Harmonic Minor',short:'Harm. Minor',intervals:[0,2,3,5,7,8,11]},
+    {name:'Melodic Minor',short:'Mel. Minor',intervals:[0,2,3,5,7,9,11]},
+  ],
+  '펜타토닉':[
+    {name:'Major Pentatonic',short:'Maj Penta',intervals:[0,2,4,7,9]},
+    {name:'Minor Pentatonic',short:'Min Penta',intervals:[0,3,5,7,10]},
+    {name:'Blues Scale',short:'Blues',intervals:[0,3,5,6,7,10]},
+    {name:'Major Blues',short:'Maj Blues',intervals:[0,2,3,4,7,9]},
+  ],
+  '헥사토닉':[
+    {name:'Whole Tone',short:'Whole Tone',intervals:[0,2,4,6,8,10]},
+    {name:'Augmented',short:'Augmented',intervals:[0,3,4,7,8,11]},
+    {name:'Prometheus',short:'Prometheus',intervals:[0,2,4,6,9,10]},
+    {name:'Blues Hexatonic',short:'Blues Hex',intervals:[0,2,3,5,6,7]},
+  ],
+  '모드 (교회)':[
+    {name:'Ionian (Major)',short:'Ionian',intervals:[0,2,4,5,7,9,11]},
+    {name:'Dorian',short:'Dorian',intervals:[0,2,3,5,7,9,10]},
+    {name:'Phrygian',short:'Phrygian',intervals:[0,1,3,5,7,8,10]},
+    {name:'Lydian',short:'Lydian',intervals:[0,2,4,6,7,9,11]},
+    {name:'Mixolydian',short:'Mixolydian',intervals:[0,2,4,5,7,9,10]},
+    {name:'Aeolian',short:'Aeolian',intervals:[0,2,3,5,7,8,10]},
+    {name:'Locrian',short:'Locrian',intervals:[0,1,3,5,6,8,10]},
+  ],
+  '멜로딕 마이너 모드':[
+    {name:'Melodic Minor',short:'Mel. Minor',intervals:[0,2,3,5,7,9,11]},
+    {name:'Dorian b2',short:'Dorian b2',intervals:[0,1,3,5,7,9,10]},
+    {name:'Lydian Augmented',short:'Lyd. Aug',intervals:[0,2,4,6,8,9,11]},
+    {name:'Lydian Dominant',short:'Lyd. Dom',intervals:[0,2,4,6,7,9,10]},
+    {name:'Mixolydian b6',short:'Mix. b6',intervals:[0,2,4,5,7,8,10]},
+    {name:'Locrian #2',short:'Loc. #2',intervals:[0,2,3,5,6,8,10]},
+    {name:'Altered',short:'Altered',intervals:[0,1,3,4,6,8,10]},
+  ],
+  '하모닉 마이너 모드':[
+    {name:'Harmonic Minor',short:'Harm. Minor',intervals:[0,2,3,5,7,8,11]},
+    {name:'Locrian #6',short:'Loc. #6',intervals:[0,1,3,5,6,9,10]},
+    {name:'Ionian #5',short:'Ion. #5',intervals:[0,2,4,5,8,9,11]},
+    {name:'Dorian #4',short:'Dor. #4',intervals:[0,2,3,6,7,9,10]},
+    {name:'Phrygian Dominant',short:'Phry. Dom',intervals:[0,1,4,5,7,8,10]},
+    {name:'Lydian #2',short:'Lyd. #2',intervals:[0,3,4,6,7,9,11]},
+    {name:'Super Locrian bb7',short:'Sup. Loc.',intervals:[0,1,3,4,6,8,9]},
+  ],
+  '코드 아르페지오':[
+    {name:'Major Triad',short:'Maj Triad',intervals:[0,4,7]},
+    {name:'Minor Triad',short:'Min Triad',intervals:[0,3,7]},
+    {name:'Diminished Triad',short:'Dim Triad',intervals:[0,3,6]},
+    {name:'Augmented Triad',short:'Aug Triad',intervals:[0,4,8]},
+    {name:'Major 7',short:'Maj7',intervals:[0,4,7,11]},
+    {name:'Dominant 7',short:'Dom7',intervals:[0,4,7,10]},
+    {name:'Minor 7',short:'Min7',intervals:[0,3,7,10]},
+    {name:'Minor Maj7',short:'mMaj7',intervals:[0,3,7,11]},
+    {name:'Half Dim (m7b5)',short:'m7b5',intervals:[0,3,6,10]},
+    {name:'Diminished 7',short:'Dim7',intervals:[0,3,6,9]},
+  ],
+  '기타':[
+    {name:'Chromatic',short:'Chromatic',intervals:[0,1,2,3,4,5,6,7,8,9,10,11]},
+    {name:'Diminished WH',short:'Dim WH',intervals:[0,2,3,5,6,8,9,11]},
+    {name:'Diminished HW',short:'Dim HW',intervals:[0,1,3,4,6,7,9,10]},
+    {name:'In Scale',short:'In Scale',intervals:[0,1,5,7,8]},
+    {name:'Hirajoshi',short:'Hirajoshi',intervals:[0,2,3,7,8]},
+    {name:'Double Harmonic',short:'Dbl Harm',intervals:[0,1,4,5,7,8,11]},
+  ],
+};
+
+let curRoot='A', curCat='펜타토닉', curScale=CATEGORIES['펜타토닉'][1];
+
+function noteName(s,f){return NOTES[(OPEN[s]+f)%12];}
+function noteOff(n,r){return(NOTES.indexOf(n)-NOTES.indexOf(r)+12)%12;}
+
+function buildFretboard(){
+  const root=curRoot, scale=curScale;
+  const intvSet=new Set(scale.intervals);
+  const STR=['E','B','G','D','A','E'];
+  const CW=54,CH=38,LP=28,TP=12;
+  const W=LP+FRETS*CW+12, H=TP+6*CH+28;
+  let svg=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;min-width:700px;display:block;">`;
+
+  // fret numbers & markers
+  const mks=[3,5,7,9,12,15];
+  for(let f=0;f<FRETS;f++){
+    const x=LP+f*CW+CW/2,y=TP+6*CH+20;
+    svg+=`<text x="${x}" y="${y}" text-anchor="middle" font-size="11" fill="#555" font-family="inherit">${f+1}</text>`;
+    if(mks.includes(f+1)&&f+1!==12)
+      svg+=`<circle cx="${x}" cy="${TP+3*CH}" r="4" fill="#333"/>`;
+    if(f+1===12){
+      svg+=`<circle cx="${x}" cy="${TP+CH*1.5}" r="4" fill="#333"/>`;
+      svg+=`<circle cx="${x}" cy="${TP+CH*4.5}" r="4" fill="#333"/>`;
+    }
+  }
+
+  // nut
+  svg+=`<line x1="${LP}" y1="${TP}" x2="${LP}" y2="${TP+6*CH}" stroke="#aaa" stroke-width="3"/>`;
+  // frets
+  for(let f=0;f<=FRETS;f++){
+    const x=LP+f*CW;
+    svg+=`<line x1="${x}" y1="${TP}" x2="${x}" y2="${TP+6*CH}" stroke="#333" stroke-width="0.8"/>`;
+  }
+  // strings
+  for(let i=0;i<6;i++){
+    const y=TP+i*CH+CH/2;
+    svg+=`<line x1="${LP}" y1="${y}" x2="${LP+FRETS*CW}" y2="${y}" stroke="#666" stroke-width="${0.9+i*0.3}"/>`;
+    svg+=`<text x="${LP-6}" y="${y+4}" text-anchor="middle" font-size="11" fill="#666" font-family="inherit">${STR[i]}</text>`;
+  }
+
+  // notes
+  for(let i=0;i<6;i++){
+    for(let f=1;f<=FRETS;f++){
+      const note=noteName(i,f);
+      const off=noteOff(note,root);
+      if(!intvSet.has(off)) continue;
+      const grp=degGroup(off);
+      if(!activeDeg[grp]) continue;
+      const cx=LP+(f-1)*CW+CW/2, cy=TP+i*CH+CH/2;
+      const col=degColor(off);
+      svg+=`<circle cx="${cx}" cy="${cy}" r="14" fill="${col.fill}" stroke="${col.stroke||col.fill}" stroke-width="1.5"/>`;
+      svg+=`<text x="${cx}" y="${cy+4}" text-anchor="middle" font-size="11" font-weight="600" fill="${col.text}" font-family="inherit">${note}</text>`;
+    }
+  }
+  svg+=`</svg>`;
+  return svg;
+}
+
+function render(){
+  document.getElementById('fb-wrap').innerHTML=buildFretboard();
+  document.getElementById('scale-title').textContent=`${curRoot} ${curScale.name}`;
+  document.getElementById('interval-str').textContent=curScale.intervals.map(i=>DEG_NAMES[i]).join(' - ');
+}
+
+// root buttons
+const roots=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const rr=document.getElementById('root-row');
+roots.forEach(r=>{
+  const b=document.createElement('button');
+  b.className='root-btn'+(r===curRoot?' active':'');
+  b.textContent=r;
+  b.onclick=()=>{
+    curRoot=r;
+    document.querySelectorAll('.root-btn').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    render();
+  };
+  rr.appendChild(b);
+});
+
+// category tabs
+const ct=document.getElementById('cat-tabs');
+Object.keys(CATEGORIES).forEach(cat=>{
+  const b=document.createElement('button');
+  b.className='cat-tab'+(cat===curCat?' active':'');
+  b.textContent=cat;
+  b.onclick=()=>{
+    curCat=cat;
+    document.querySelectorAll('.cat-tab').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    curScale=CATEGORIES[cat][0];
+    buildScaleGrid();
+    render();
+  };
+  ct.appendChild(b);
+});
+
+function buildScaleGrid(){
+  const sg=document.getElementById('scale-grid');
+  sg.innerHTML='';
+  CATEGORIES[curCat].forEach(sc=>{
+    const b=document.createElement('button');
+    b.className='scale-btn'+(sc===curScale?' active':'');
+    b.innerHTML=`<div class="scale-name-big">${sc.short}</div><div class="scale-intervals">${sc.intervals.map(i=>DEG_NAMES[i]).join(' ')}</div>`;
+    b.onclick=()=>{
+      curScale=sc;
+      document.querySelectorAll('.scale-btn').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      render();
+    };
+    sg.appendChild(b);
+  });
+}
+
+buildScaleGrid();
+render();
+</script>
+</body>
+</html>
